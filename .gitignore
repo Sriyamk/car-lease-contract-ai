@@ -8,6 +8,10 @@ __pycache__/
 # Environment variables
 .env
 
+# API keys / secrets
+.env
+*.env
+
 # Mac files
 .DS_Store
 
