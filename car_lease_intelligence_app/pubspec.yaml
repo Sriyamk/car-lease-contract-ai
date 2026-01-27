@@ -1,0 +1,28 @@
+name: car_lease_intelligence_app
+description: "A new Flutter project."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  dotted_border: ^3.1.0
+  cupertino_icons: ^1.0.8
+  file_picker: ^6.1.7       # Added for picking files
+  http: ^1.1.0   
+  google_fonts: ^6.1.0   
+
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+
+
