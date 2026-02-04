@@ -6,17 +6,16 @@ import 'package:file_picker/file_picker.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:typed_data';
-// REMOVED: void HomeScreen() and class CarLeaseApp
-// This file now only exports HomeScreen widget
+import 'widgets/chat_bot.dart';
 
-class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+class HomePage extends StatefulWidget {
+  const HomePage({super.key});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  State<HomePage> createState() => _HomePageState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomePageState extends State<HomePage> {
   final ScrollController _scrollController = ScrollController();
   bool _showNavbar = true;
   double _lastScrollOffset = 0;
@@ -106,8 +105,24 @@ Future<void> _uploadFile(Uint8List bytes, String filename) async {
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
+      
+      // 🔍 DEBUG: Print what we received
+      print('='*80);
+      print('📦 API RESPONSE RECEIVED:');
+      print(json.encode(data));
+      print('='*80);
+      
       setState(() {
-        results = data['lease_details']; // OCR + LLM results
+        // ✅ FIX: Merge lease_details with fairness_analysis
+        results = {
+          ...?data['lease_details'],
+          if (data.containsKey('fairness_analysis'))
+            '8. Fairness Analysis': data['fairness_analysis'],
+        };
+        
+        // ✅ Pass contract data to ChatService
+        ChatService().setContractData(results);
+        
         isLoading = false;
         errorMessage = null;
       });
@@ -170,124 +185,131 @@ Future<void> _lookupVIN() async {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: RadialGradient(
-            center: Alignment.topCenter,
-            radius: 1.5,
-            colors: [
-              Color(0xFF000000),
-              Color(0xFF200B18),
-              Color(0xFF765767),
-            ],
-          ),
-        ),
-        child: Stack(
-          children: [
-            // Main Content
-            RawScrollbar(
-              controller: _scrollController,
-              thumbVisibility: true,
-              thickness: 10,
-              radius: const Radius.circular(10),
-              thumbColor: const Color.fromARGB(255, 55, 29, 45),
-              child: SingleChildScrollView(
-              controller: _scrollController,
-              child: Column(
-                children: [
-                  const SizedBox(height: 100), // Space for navbar
-                  
-                  // Header
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 40),
-                    child: _HeaderSection(),
-                  ),
-
-                  // Main Card
-                  Center(
-                    child: Container(
-                      constraints: const BoxConstraints(maxWidth: 1100),
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF5B3D7),
-                          borderRadius: BorderRadius.circular(18),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.6),
-                              blurRadius: 80,
-                              spreadRadius: 30,
-                            ),
-                          ],
-                        ),
-                        padding: const EdgeInsets.all(40),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            // Upload Section
-                            _UploadSection(
-                              selectedFileName: selectedFileName,
-                              onTap: _pickFile,
-                            ),
-
-                            // ========== VIN LOOKUP SECTION - NEW ==========
-                            const SizedBox(height: 40),
-                            _VINLookupSection(
-                              vinController: vinController,
-                              onLookup: _lookupVIN,
-                              isLoading: isVinLoading,
-                              error: vinError,
-                              result: vinResult,
-                            ),
-                            // =============================================
-
-                            // Loader
-                            if (isLoading) ...[
-                              const SizedBox(height: 30),
-                              const _LoaderWidget(),
-                            ],
-
-                            // Error
-                            if (errorMessage != null) ...[
-                              const SizedBox(height: 20),
-                              _ErrorWidget(message: errorMessage!),
-                            ],
-
-                            // Results
-                            if (results != null) ...[
-                              const SizedBox(height: 40),
-                              _ResultsSection(results: results!),
-                            ],
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 60),
+      body: Stack(  // ✅ OUTER STACK ADDED
+        children: [
+          Container(
+            decoration: const BoxDecoration(
+              gradient: RadialGradient(
+                center: Alignment.topCenter,
+                radius: 1.5,
+                colors: [
+                  Color(0xFF000000),
+                  Color(0xFF200B18),
+                  Color(0xFF765767),
                 ],
               ),
             ),
-            ),
+            child: Stack(
+              children: [
+                // Main Content
+                RawScrollbar(
+                  controller: _scrollController,
+                  thumbVisibility: true,
+                  thickness: 10,
+                  radius: const Radius.circular(10),
+                  thumbColor: const Color.fromARGB(255, 55, 29, 45),
+                  child: SingleChildScrollView(
+                  controller: _scrollController,
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 100), // Space for navbar
+                      
+                      // Header
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 40),
+                        child: _HeaderSection(),
+                      ),
 
-            // Animated Navbar
-            AnimatedPositioned(
-              duration: const Duration(milliseconds: 1400),
-              curve: Curves.easeInOut,
-              top: _showNavbar ? 0 : -80,
-              left: 0,
-              right: 0,
-              child: const _NavBar(),
+                      // Main Card
+                      Center(
+                        child: Container(
+                          constraints: const BoxConstraints(maxWidth: 1100),
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF5B3D7),
+                              borderRadius: BorderRadius.circular(18),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.6),
+                                  blurRadius: 80,
+                                  spreadRadius: 30,
+                                ),
+                              ],
+                            ),
+                            padding: const EdgeInsets.all(40),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                // Upload Section
+                                _UploadSection(
+                                  selectedFileName: selectedFileName,
+                                  onTap: _pickFile,
+                                ),
+
+                                // ========== VIN LOOKUP SECTION - NEW ==========
+                                const SizedBox(height: 40),
+                                _VINLookupSection(
+                                  vinController: vinController,
+                                  onLookup: _lookupVIN,
+                                  isLoading: isVinLoading,
+                                  error: vinError,
+                                  result: vinResult,
+                                ),
+                                // =============================================
+
+                                // Loader
+                                if (isLoading) ...[
+                                  const SizedBox(height: 30),
+                                  const _LoaderWidget(),
+                                ],
+
+                                // Error
+                                if (errorMessage != null) ...[
+                                  const SizedBox(height: 20),
+                                  _ErrorWidget(message: errorMessage!),
+                                ],
+
+                                // Results
+                                if (results != null) ...[
+                                  const SizedBox(height: 40),
+                                  _ResultsSection(results: results!),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 60),
+                    ],
+                  ),
+                ),
+                ),
+
+                // Animated Navbar
+                AnimatedPositioned(
+                  duration: const Duration(milliseconds: 1400),
+                  curve: Curves.easeInOut,
+                  top: _showNavbar ? 0 : -80,
+                  left: 0,
+                  right: 0,
+                  child: const _NavBar(),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+          
+          // ✅ FLOATING CHAT BUTTON
+          const FloatingChatButton(),
+        ],
       ),
     );
   }
 }
 
 // ============================================================================
-// VIN LOOKUP SECTION - NEW WIDGET
+// VIN LOOKUP SECTION
 // ============================================================================
 
 class _VINLookupSection extends StatelessWidget {
@@ -310,7 +332,7 @@ class _VINLookupSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        const SelectableText(
           'VIN Lookup',
           style: TextStyle(
             color: Color(0xFFFB1597),
@@ -361,7 +383,7 @@ class _VINLookupSection extends StatelessWidget {
         // Error Message
         if (error != null) ...[
           const SizedBox(height: 12),
-          Text(
+          SelectableText(
             error!,
             style: const TextStyle(
               color: Color(0xFFFF6B93),
@@ -373,7 +395,7 @@ class _VINLookupSection extends StatelessWidget {
         // Loading Indicator
         if (isLoading) ...[
           const SizedBox(height: 12),
-          const Text(
+          const SelectableText(
             'Fetching VIN details...',
             style: TextStyle(
               color: Color(0xFF170912),
@@ -436,7 +458,7 @@ class _VINAnalyseButtonState extends State<_VINAnalyseButton> {
                   ]
                 : null,
           ),
-          child: Text(
+          child: SelectableText(
             widget.isLoading ? 'Loading...' : 'Analyse VIN',
             style: const TextStyle(
               color: Colors.white,
@@ -476,7 +498,7 @@ class _VINResultCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          const SelectableText(
             'Vehicle Details',
             style: TextStyle(
               color: Color(0xFFFB1597),
@@ -504,7 +526,7 @@ class _VINResultCard extends StatelessWidget {
           if (result['vehicle_details'] != null &&
               result['vehicle_details'] is Map<String, dynamic>) ...[
             const SizedBox(height: 8),
-            const Text(
+            const SelectableText(
               'Vehicle Info',
               style: TextStyle(
                 color: Color(0xFFFB1597),
@@ -540,35 +562,38 @@ class _VINDataRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 120,
-            child: Text(
-              label,
+      child: SelectableText.rich(
+        TextSpan(
+          children: [
+            TextSpan(
+              text: '$label: ',
               style: const TextStyle(
                 color: Color(0xFFFB1597),
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
               ),
             ),
-          ),
-          Expanded(
-            child: Text(
-              value,
+            TextSpan(
+              text: value,
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
               ),
             ),
-          ),
-        ],
+          ],
+        ),
+        showCursor: true,
+        cursorColor: Colors.white,
+        toolbarOptions: const ToolbarOptions(
+          copy: true,
+          selectAll: true,
+        ),
       ),
     );
   }
 }
+
 
 // ============================================================================
 // NAVBAR
@@ -667,7 +692,7 @@ class _NavItemState extends State<_NavItem> {
                 : null,
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Text(
+          child: SelectableText(
             widget.text,
             style: TextStyle(
               color: widget.isActive ? const Color(0xFF021F1A) : const Color(0xFFD4FFF7),
@@ -801,7 +826,7 @@ class _UploadSectionState extends State<_UploadSection> {
       ),
       child: Column(
         children: [
-          const Text(
+          const SelectableText(
             'Upload Lease PDF',
             style: TextStyle(
               color: Color(0xFFFB1597),
@@ -810,7 +835,7 @@ class _UploadSectionState extends State<_UploadSection> {
             ),
           ),
           const SizedBox(height: 8),
-          Text(
+          SelectableText(
             widget.selectedFileName ?? 'Drag & drop or click to select',
             style: const TextStyle(
               color: Color(0xFF170912),
@@ -883,7 +908,7 @@ class _GradientButtonState extends State<_GradientButton> {
           ),
           child: Opacity(
             opacity: widget.isDisabled ? 0.6 : 1.0,
-            child: Text(
+            child: SelectableText(
               widget.text,
               style: const TextStyle(
                 color: Colors.white,
@@ -921,7 +946,7 @@ class _LoaderWidget extends StatelessWidget {
           ),
         ),
         SizedBox(height: 10),
-        Text(
+        SelectableText(
           'Analyzing contract with AI…',
           style: TextStyle(
             color: Colors.white,
@@ -951,7 +976,7 @@ class _ErrorWidget extends StatelessWidget {
         color: const Color(0xFF3F1D2B),
         borderRadius: BorderRadius.circular(10),
       ),
-      child: Text(
+      child: SelectableText(
         message,
         style: const TextStyle(
           color: Color(0xFFFDA4D6),
@@ -996,6 +1021,14 @@ class _SectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Build rows first to check if we have any content
+    final rows = data is Map<String, dynamic> ? _buildRows(data) : <Widget>[];
+    
+    // If no rows to display, return empty container
+    if (rows.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(20),
@@ -1006,7 +1039,7 @@ class _SectionCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
+          SelectableText(
             title,
             style: const TextStyle(
               color: Color(0xFFFF1D9D),
@@ -1015,7 +1048,7 @@ class _SectionCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 15),
-          if (data is Map<String, dynamic>) ..._buildRows(data),
+          ...rows,
         ],
       ),
     );
@@ -1026,29 +1059,107 @@ class _SectionCard extends StatelessWidget {
     
     data.forEach((key, value) {
       if (value is Map<String, dynamic>) {
-        // Nested section
-        widgets.add(
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  key,
-                  style: const TextStyle(
-                    color: Color(0xFFFF1D9D),
-                    fontSize: 15,
-                    fontWeight: FontWeight.w500,
-                  ),
+        // Check if this is a fairness breakdown item with score/max structure
+        if (value.containsKey('score') && value.containsKey('max')) {
+          final score = value['score'] ?? 0;
+          final maxScore = value['max'] ?? 0;
+          final percentage = maxScore > 0 ? ((score / maxScore) * 100).round() : 0;
+          
+          widgets.add(_FairnessBreakdownRow(
+            label: key,
+            score: score,
+            maxScore: maxScore,
+            percentage: percentage,
+          ));
+        } else {
+          // Nested section - recursively build rows
+          final nestedRows = _buildRows(value);
+          
+          if (nestedRows.isNotEmpty) {
+            widgets.add(
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SelectableText(
+                      key,
+                      style: const TextStyle(
+                        color: Color(0xFFFF1D9D),
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    ...nestedRows,
+                  ],
                 ),
-                const SizedBox(height: 8),
-                ..._buildRows(value),
-              ],
+              ),
+            );
+          }
+        }
+      } else if (value is List) {
+        // Handle lists (like warnings array)
+        if (value.isNotEmpty) {
+          widgets.add(
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SelectableText(
+                    key,
+                    style: const TextStyle(
+                      color: Color(0xFFFF1D9D),
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  ...value.asMap().entries.map((entry) => 
+                    Padding(
+                      padding: const EdgeInsets.only(left: 16, bottom: 6),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SelectableText(
+                            '• ',
+                            style: TextStyle(
+                              color: Color(0xFFFF6B93),
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          Expanded(
+                            child: SelectableText(
+                              entry.value.toString(),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  ).toList(),
+                ],
+              ),
             ),
-          ),
-        );
+          );
+        }
       } else {
-        widgets.add(_DataRow(label: key, value: value.toString()));
+        final valueStr = value.toString().trim();
+        
+        // Only show non-empty, meaningful values
+        if (valueStr.isNotEmpty && 
+            valueStr.toLowerCase() != 'information not available' &&
+            valueStr.toLowerCase() != 'not available' &&
+            valueStr.toLowerCase() != 'n/a' &&
+            valueStr != 'null') {
+          widgets.add(_DataRow(label: key, value: valueStr));
+        }
       }
     });
     
@@ -1074,7 +1185,7 @@ class _DataRow extends StatelessWidget {
         children: [
           SizedBox(
             width: 280,
-            child: Text(
+            child: SelectableText(
               label,
               style: const TextStyle(
                 color: Color(0xFFFF1D9D),
@@ -1084,7 +1195,7 @@ class _DataRow extends StatelessWidget {
             ),
           ),
           Expanded(
-            child: Text(
+            child: SelectableText(
               value,
               style: const TextStyle(
                 color: Colors.white,
@@ -1099,8 +1210,114 @@ class _DataRow extends StatelessWidget {
   }
 }
 
+// ============================================================================
+// FAIRNESS BREAKDOWN ROW WITH PROGRESS BAR
+// ============================================================================
 
+class _FairnessBreakdownRow extends StatelessWidget {
+  final String label;
+  final int score;
+  final int maxScore;
+  final int percentage;
 
+  const _FairnessBreakdownRow({
+    required this.label,
+    required this.score,
+    required this.maxScore,
+    required this.percentage,
+  });
+
+  String _formatLabel(String key) {
+    return key
+        .replaceAll('_', ' ')
+        .split(' ')
+        .map((word) => word.isNotEmpty
+            ? word[0].toUpperCase() + word.substring(1).toLowerCase()
+            : '')
+        .join(' ');
+  }
+
+  Color _getScoreColor(int percentage) {
+    if (percentage >= 80) return const Color(0xFF00FF88);
+    if (percentage >= 60) return const Color(0xFFFFD700);
+    if (percentage >= 40) return const Color(0xFFFFA500);
+    return const Color(0xFFFF6B93);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _getScoreColor(percentage);
+    
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Label and Score
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: SelectableText(
+                  _formatLabel(label),
+                  style: const TextStyle(
+                    color: Color(0xFFFF1D9D),
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+              SelectableText(
+                '$score / $maxScore',
+                style: TextStyle(
+                  color: color,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          
+          // Progress Bar
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: Container(
+              height: 8,
+              decoration: BoxDecoration(
+                color: const Color(0xFF3F1D2B),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: FractionallySizedBox(
+                alignment: Alignment.centerLeft,
+                widthFactor: maxScore > 0 ? (score / maxScore) : 0,
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [color, color.withOpacity(0.7)],
+                    ),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          
+          // Percentage
+          const SizedBox(height: 4),
+          SelectableText(
+            '$percentage%',
+            style: TextStyle(
+              color: color.withOpacity(0.8),
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 
 class _DashedBorderPainter extends CustomPainter {

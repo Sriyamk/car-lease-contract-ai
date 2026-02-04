@@ -26,7 +26,7 @@ class CarLeaseApp extends StatelessWidget {
         '/login': (context) => const LoginPage(),
         '/signup': (context) => const SignupPage(),
         '/forgot-password': (context) => const ForgotPasswordPage(),
-        '/home': (context) => const HomeScreen(),
+        '/home': (context) => const HomePage(),
       },
     );
   }
