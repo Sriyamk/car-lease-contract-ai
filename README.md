@@ -459,7 +459,11 @@ flutter build web --release
 # Deploy build/web/ folder to Firebase Hosting, Netlify, or Vercel
 ```
 
-## 📄 License
+## Author
+
+Sriya Muthukumar
+
+## License
 
 This project is licensed under the MIT License.
 
